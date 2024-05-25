@@ -2,62 +2,103 @@
 #define BLYNK_TEMPLATE_ID "TMPL6P-Wygrt1"
 #define BLYNK_AUTH_TOKEN "acPxQmZF_0swYPa7ANkaA9ZkzybGgcyj"
 #define BLYNK_PRINT Serial
+
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
-char ssid[] = "HOME65_2.4Gz";
-char pass[] = "59454199";
-#include <SoftwareSerial.h>
-#include <EEPROM.h>
 #include "GravityTDS.h"
 
-#define TdsSensorPin A0
+// WiFi credentials
+char ssid[] = "HOME65_2.4Gz";
+char pass[] = "59454199";
 
+// Pin definitions
+#define TdsSensorPin A0
+#define redPin D0
+#define greenPin D1
+#define bluePin D2
+
+// GravityTDS instance
 GravityTDS gravityTds;
 
 float temperature = 25, tdsValue = 0;
-
-const int redPin = D0;
+unsigned long previousMillis = 0;
+const long interval = 1000; // Interval for updating TDS value and Blynk
 
 void setup() {
-  pinMode(redPin, OUTPUT);
-  pinMode(LED_BUILTIN, OUTPUT);
+  // Initialize serial communication
   Serial.begin(115200);
+
+  // Configure pin modes
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  // Initialize GravityTDS sensor
   gravityTds.setPin(TdsSensorPin);
   gravityTds.setAref(5.0);
   gravityTds.setAdcRange(1024);
-  Serial.begin(115200);
+
+  // Initialize Blynk
   Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
 }
 
 void loop() {
   Blynk.run();
-  gravityTds.setTemperature(temperature);
-  gravityTds.update();
-  tdsValue = gravityTds.getTdsValue();
 
-  Serial.print("TDS: ");
-  Serial.print(tdsValue, 0);
-  Serial.println(" ppm");
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+    
+    // Update the TDS sensor reading
+    gravityTds.setTemperature(temperature);
+    gravityTds.update();
+    tdsValue = gravityTds.getTdsValue();
 
-  // Adjusting the conditions
-  if (tdsValue >= 500) {
-    digitalWrite(LED_BUILTIN, HIGH); // Red color
-    digitalWrite(redPin, HIGH);
-  } else if (tdsValue >= 301 && tdsValue <= 500) {
-    digitalWrite(LED_BUILTIN, HIGH); // Red color
-    digitalWrite(redPin, HIGH);
-  } else if (tdsValue >= 50 && tdsValue <= 300) {
-    digitalWrite(LED_BUILTIN, LOW); // Green color
-    digitalWrite(redPin, LOW);
-  } else {
-    digitalWrite(LED_BUILTIN, LOW); // Turn off LED
-    digitalWrite(redPin, LOW);
+    // Print TDS value to serial monitor
+    Serial.print("TDS: ");
+    Serial.print(tdsValue, 0);
+    Serial.println(" ppm");
+
+    // Adjusting the conditions
+    if (tdsValue > 50) {
+      digitalWrite(redPin, HIGH);
+      digitalWrite(LED_BUILTIN, LOW); // Turn off the built-in LED
+    } else if (tdsValue > 20) {
+      blinkBuiltinLED(250, 150);
+      digitalWrite(redPin, LOW);
+    } else {
+      digitalWrite(LED_BUILTIN, LOW);
+      digitalWrite(redPin, LOW);
+    }
+
+    if (tdsValue > 100) {
+      digitalWrite(redPin, HIGH);
+      digitalWrite(greenPin, LOW);
+      digitalWrite(bluePin, LOW);
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(250);
+      digitalWrite(LED_BUILTIN, LOW);
+      delay(150);
+    } else {
+      digitalWrite(redPin, LOW);
+      digitalWrite(greenPin, HIGH);
+      digitalWrite(bluePin, LOW);
+    }
+
+    // Send TDS value to Blynk
+    Blynk.virtualWrite(V0, tdsValue);
   }
 
-  Blynk.virtualWrite(V0, tdsValue);
+  // Check WiFi connection periodically
+  checkWiFiConnection();
+}
 
-  checkWiFiConnection(); // Check WiFi connection periodically
-  delay(1000);           // Adjust the delay according to your requirements
+void blinkBuiltinLED(int onTime, int offTime) {
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(onTime);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(offTime);
 }
 
 void checkWiFiConnection() {
