@@ -10,6 +10,14 @@
 * Small and compact
 * Low power consumption
 
+**Equipment required for this project:**
+* Wemos D1 ESP8266
+* ESP8266 NodeMCU 1.0 (ESP-12E Module)
+* DHT11 sensor
+* TDS sensor
+* rgb sensor
+* USB UART
+  
 **Documentation:**
 
 * TDSDHT11 Datasheet: [https://www.adafruit.com/product/386](https://www.adafruit.com/product/386)
