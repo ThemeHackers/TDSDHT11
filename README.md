@@ -31,29 +31,46 @@
 **Code Example (Arduino):**
 
 ```c++
-#include <Adafruit_DHT.h>
-
-#define DHTPIN 4 // Pin number connected to the TDSDHT11 sensor
-#define DHTTYPE DHT11 // Type of TDSDHT11 sensor
-
-Adafruit_DHT dht(DHTPIN, DHTTYPE);
-
 void setup() {
-  Serial.begin(9600);
+  pinMode(redPin, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
+  Serial.begin(115200);
+  gravityTds.setPin(TdsSensorPin);
+  gravityTds.setAref(5.0);
+  gravityTds.setAdcRange(1024);
+  Serial.begin(115200);
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
 }
 
 void loop() {
-  float temperature, humidity;
-  dht.readSensor(&temperature, &humidity);
+  Blynk.run();
+  gravityTds.setTemperature(temperature);
+  gravityTds.update();
+  tdsValue = gravityTds.getTdsValue();
 
-  Serial.print("Temperature: ");
-  Serial.print(temperature);
-  Serial.print("°C ");
-  Serial.print("Humidity: ");
-  Serial.print(humidity);
-  Serial.println("%");
+  Serial.print("TDS: ");
+  Serial.print(tdsValue, 0);
+  Serial.println(" ppm");
 
-  delay(2000);
+  // Adjusting the conditions
+  if (tdsValue >= 500) {
+    digitalWrite(LED_BUILTIN, HIGH); // Red color
+    digitalWrite(redPin, HIGH);
+  } else if (tdsValue >= 301 && tdsValue <= 500) {
+    digitalWrite(LED_BUILTIN, HIGH); // Red color
+    digitalWrite(redPin, HIGH);
+  } else if (tdsValue >= 50 && tdsValue <= 300) {
+    digitalWrite(LED_BUILTIN, LOW); // Green color
+    digitalWrite(redPin, LOW);
+  } else {
+    digitalWrite(LED_BUILTIN, LOW); // Turn off LED
+    digitalWrite(redPin, LOW);
+  }
+
+  Blynk.virtualWrite(V0, tdsValue);
+
+  checkWiFiConnection(); // Check WiFi connection periodically
+  delay(1000);           // Adjust the delay according to your requirements
 }
 ```
 **Notes:**
