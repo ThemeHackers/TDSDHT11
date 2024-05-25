@@ -60,26 +60,18 @@ void loop() {
     Serial.print(tdsValue, 0);
     Serial.println(" ppm");
 
-    // Adjusting the conditions
-    if (tdsValue > 50) {
-      digitalWrite(redPin, HIGH);
-      digitalWrite(LED_BUILTIN, LOW); // Turn off the built-in LED
-    } else if (tdsValue > 20) {
-      blinkBuiltinLED(250, 150);
-      digitalWrite(redPin, LOW);
-    } else {
-      digitalWrite(LED_BUILTIN, LOW);
-      digitalWrite(redPin, LOW);
-    }
-
-    if (tdsValue > 100) {
-      digitalWrite(redPin, HIGH);
-      digitalWrite(greenPin, LOW);
-      digitalWrite(bluePin, LOW);
+    if (tdsValue > 18) {
       digitalWrite(LED_BUILTIN, HIGH);
       delay(250);
       digitalWrite(LED_BUILTIN, LOW);
-      delay(150);
+      delay(250);
+    }
+
+    if (tdsValue > 500) {
+      digitalWrite(redPin, HIGH);
+      digitalWrite(greenPin, LOW);
+      digitalWrite(bluePin, LOW);
+
     } else {
       digitalWrite(redPin, LOW);
       digitalWrite(greenPin, HIGH);
