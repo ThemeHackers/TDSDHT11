@@ -1,5 +1,5 @@
 ## TDSDHT11: Water Quality Temperature and Humidity Sensors
-## The microcontroller is reset via the web server http://............/reset
+The microcontroller is reset via the web server http://............/reset
 
 **TDSDHT11** is an easy-to-use and inexpensive temperature and humidity sensor that is perfect for a variety of projects, such as measuring the temperature and humidity in a fish tank, a home temperature and humidity control system, or even measuring the temperature and humidity in the environment.
 
