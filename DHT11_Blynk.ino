@@ -1,8 +1,3 @@
-#define BLYNK_TEMPLATE_NAME "TDSDHT11 Sensor"
-#define BLYNK_TEMPLATE_ID "TMPL6P-Wygrt1"
-#define BLYNK_AUTH_TOKEN "acPxQmZF_0swYPa7ANkaA9ZkzybGgcyj"
-#define BLYNK_PRINT Serial
-
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
 #include <ESP8266WebServer.h>
@@ -56,46 +51,45 @@ void loop() {
   int humidity = dht.readHumidity();
   
   if (isnan(temperature) || isnan(humidity)) {
-    Serial.println("Failed to read from DHT sensor!");
+    // Serial.println("Failed to read from DHT sensor!");
     return;
   }
   
-  Serial.print("Humidity: ");
-  Serial.print(humidity);
-  Serial.print(" %\t");
-  Serial.print("Temperature: ");
-  Serial.println(temperature);
+  // Serial.print("Humidity: ");
+  // Serial.print(humidity);
+  // Serial.print(" %\t");
+  // Serial.print("Temperature: ");
+  // Serial.println(temperature);
   
   Blynk.virtualWrite(V2, temperature);
   Blynk.virtualWrite(V3, humidity);
-  
-  delay(500);
+
   digitalWrite(LED_BUILTIN, HIGH);
-  delay(300);
+  delay(150);
   digitalWrite(LED_BUILTIN, LOW);
-  delay(200);
+  delay(300);
 }
 
 void connectToWiFi() {
   for (int i = 0; i < numNetworks; i++) {
-    Serial.print("Connecting to SSID: ");
+    // Serial.print("Connecting to SSID: ");
     Serial.println(ssid[i]);
     WiFi.begin(ssid[i], pass[i]);
 
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-      delay(500);
-      Serial.print(".");
+      delay(250);
+      // Serial.print(".");
       attempts++;
     }
 
     if (WiFi.status() == WL_CONNECTED) {
-      Serial.println("\nWiFi connected to: " + String(ssid[i]));
+      // Serial.println("\nWiFi connected to: " + String(ssid[i]));
       break; // Exit the loop if connected successfully
     } else {
-      Serial.println("\nWiFi connection failed. Trying next network...");
+      // Serial.println("\nWiFi connection failed. Trying next network...");
       WiFi.disconnect();
-      delay(1000);
+      delay(250);
     }
   }
 }
@@ -106,7 +100,7 @@ BLYNK_WRITE(V5) {
 
   if (command == "ipconfig") {
     String ipAddress = WiFi.localIP().toString();
-    terminal.println("IP Address: http://" + ipAddress + "/reset");
+    terminal.println("IP Address to reset: http://" + ipAddress + "/reset");
     terminal.flush();
   } else if (command == "clear") {
     terminal.clear();
