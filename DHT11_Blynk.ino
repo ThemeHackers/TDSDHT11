@@ -13,8 +13,9 @@
 
 DHT dht(DHTPIN, DHTTYPE);
 
-char ssid[] = "HOME65_2.4Gz";
-char pass[] = "59454199";
+char ssid[][32] = {"HOME65_2.4Gz", "@TPN_Teacher_WiFi", "@TPN_POOL", "TOP"};
+char pass[][64] = {"59454199", "@tpn42566", "t12345678t", "44554455"};
+int numNetworks = 4; // Number of networks to try
 
 // Blynk terminal widget on virtual pin V5
 WidgetTerminal terminal(V5);
@@ -36,13 +37,15 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(9600);
   dht.begin();
-  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
 
   // Initialize web server
   server.on("/", handleRoot);
   server.on("/reset", handleReset);
   server.begin();
   Serial.println("HTTP server started");
+
+  // Connect to WiFi
+  connectToWiFi();
 }
 
 void loop() {
@@ -73,6 +76,30 @@ void loop() {
   delay(200);
 }
 
+void connectToWiFi() {
+  for (int i = 0; i < numNetworks; i++) {
+    Serial.print("Connecting to SSID: ");
+    Serial.println(ssid[i]);
+    WiFi.begin(ssid[i], pass[i]);
+
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+      delay(500);
+      Serial.print(".");
+      attempts++;
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("\nWiFi connected to: " + String(ssid[i]));
+      break; // Exit the loop if connected successfully
+    } else {
+      Serial.println("\nWiFi connection failed. Trying next network...");
+      WiFi.disconnect();
+      delay(1000);
+    }
+  }
+}
+
 // Blynk function to handle terminal input
 BLYNK_WRITE(V5) {
   String command = param.asStr();
@@ -85,6 +112,21 @@ BLYNK_WRITE(V5) {
     terminal.clear();
     terminal.println("Terminal cleared...");
     terminal.flush();
+  } else if (command.startsWith("ssid:")) {
+    command.remove(0, 5);
+    command.toCharArray(ssid[0], sizeof(ssid[0]));
+    terminal.println("SSID set to: " + String(ssid[0]));
+    terminal.flush();
+  } else if (command.startsWith("pass:")) {
+    command.remove(0, 5);
+    command.toCharArray(pass[0], sizeof(pass[0]));
+    terminal.println("Password set to: " + String(pass[0]));
+    terminal.flush();
+  } else if (command == "save") {
+    terminal.println("Saving new WiFi credentials and restarting...");
+    terminal.flush();
+    delay(100);
+    ESP.restart();
   } else {
     terminal.println("Unknown command: " + command);
     terminal.flush();
