@@ -1,19 +1,33 @@
+#define BLYNK_TEMPLATE_NAME "TDSDHT11 Sensor"
+#define BLYNK_TEMPLATE_ID "TMPL6P-Wygrt1"
+#define BLYNK_AUTH_TOKEN "acPxQmZF_0swYPa7ANkaA9ZkzybGgcyj"
+#define BLYNK_PRINT Serial
+
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
 #include <ESP8266WebServer.h>
-#include <DHT.h>
+#include "GravityTDS.h"
 
-#define DHTPIN D1       // Define the pin where the DHT sensor is connected
-#define DHTTYPE DHT11   // Define the type of DHT sensor
-
-DHT dht(DHTPIN, DHTTYPE);
-
+// Default WiFi credentials
 char ssid[][32] = {"HOME65_2.4Gz", "@TPN_Teacher_WiFi", "@TPN_POOL", "TOP"};
 char pass[][64] = {"59454199", "@tpn42566", "t12345678t", "44554455"};
 int numNetworks = 4; // Number of networks to try
 
-// Blynk terminal widget on virtual pin V5
-WidgetTerminal terminal(V5);
+// Pin definitions
+#define TdsSensorPin A0
+#define redPin D0
+#define greenPin D1
+#define bluePin D2
+
+// GravityTDS instance
+GravityTDS gravityTds;
+
+float temperature = 25, tdsValue = 0;
+unsigned long previousMillis = 0;
+const long interval = 750; // Interval for updating TDS value and Blynk
+
+// Blynk terminal widget on virtual pin V4
+WidgetTerminal terminal(V4);
 
 // Web server on port 80
 ESP8266WebServer server(80);
@@ -29,73 +43,110 @@ void handleReset() {
 }
 
 void setup() {
+  // Initialize serial communication
+  Serial.begin(115200);
+
+  // Configure pin modes
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
-  Serial.begin(9600);
-  dht.begin();
+
+  // Initialize GravityTDS sensor
+  gravityTds.setPin(TdsSensorPin);
+  gravityTds.setAref(5.0);
+  gravityTds.setAdcRange(1024);
+
+  // Initialize Blynk
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid[0], pass[0]);
 
   // Initialize web server
   server.on("/", handleRoot);
   server.on("/reset", handleReset);
   server.begin();
   Serial.println("HTTP server started");
-
-  // Connect to WiFi
-  connectToWiFi();
 }
 
 void loop() {
   Blynk.run();
   server.handleClient();
-  
-  int temperature = dht.readTemperature();
-  int humidity = dht.readHumidity();
-  
-  if (isnan(temperature) || isnan(humidity)) {
-    // Serial.println("Failed to read from DHT sensor!");
-    return;
-  }
-  
-  // Serial.print("Humidity: ");
-  // Serial.print(humidity);
-  // Serial.print(" %\t");
-  // Serial.print("Temperature: ");
-  // Serial.println(temperature);
-  
-  Blynk.virtualWrite(V2, temperature);
-  Blynk.virtualWrite(V3, humidity);
 
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(150);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(300);
-}
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+    
+    // Update the TDS sensor reading
+    gravityTds.setTemperature(temperature);
+    gravityTds.update();
+    tdsValue = gravityTds.getTdsValue();
 
-void connectToWiFi() {
-  for (int i = 0; i < numNetworks; i++) {
-    // Serial.print("Connecting to SSID: ");
-    Serial.println(ssid[i]);
-    WiFi.begin(ssid[i], pass[i]);
+    // Print TDS value to serial monitor
+    // Serial.print("TDS: ");
+    // Serial.print(tdsValue, 0);
+    // Serial.println(" ppm");
 
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    if (tdsValue > 18) {
+      digitalWrite(LED_BUILTIN, HIGH);
       delay(250);
-      // Serial.print(".");
-      attempts++;
+      digitalWrite(LED_BUILTIN, LOW);
+      delay(250);
     }
 
-    if (WiFi.status() == WL_CONNECTED) {
-      // Serial.println("\nWiFi connected to: " + String(ssid[i]));
-      break; // Exit the loop if connected successfully
+    if (tdsValue > 100) {
+      digitalWrite(redPin, HIGH);
+      digitalWrite(greenPin, LOW);
+      digitalWrite(bluePin, LOW);
     } else {
-      // Serial.println("\nWiFi connection failed. Trying next network...");
-      WiFi.disconnect();
-      delay(250);
+      digitalWrite(redPin, LOW);
+      digitalWrite(greenPin, HIGH);
+      digitalWrite(bluePin, LOW);
+    }
+
+    // Send TDS value to Blynk
+    Blynk.virtualWrite(V0, tdsValue);
+  }
+
+  // Check WiFi connection periodically
+  checkWiFiConnection();
+}
+
+void blinkBuiltinLED(int onTime, int offTime) {
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(onTime);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(offTime);
+}
+
+void checkWiFiConnection() {
+  if (WiFi.status() != WL_CONNECTED) {
+    // Serial.println("WiFi connection lost. Reconnecting...");
+
+    for (int i = 0; i < numNetworks; i++) {
+      // Serial.print("Trying SSID: ");
+      // Serial.println(ssid[i]);
+      WiFi.begin(ssid[i], pass[i]);
+
+      int attempts = 0;
+      while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+        delay(500);
+        // Serial.print(".");
+        attempts++;
+      }
+
+      if (WiFi.status() == WL_CONNECTED) {
+        // Serial.println("\nWiFi connected to: " + String(ssid[i]));
+        break; // Exit the loop if connected successfully
+      } else {
+        // Serial.println("\nWiFi connection failed. Trying next network...");
+        WiFi.disconnect();
+        delay(1000);
+      }
     }
   }
 }
 
 // Blynk function to handle terminal input
-BLYNK_WRITE(V5) {
+BLYNK_WRITE(V4) {
   String command = param.asStr();
 
   if (command == "ipconfig") {
