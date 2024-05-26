@@ -24,7 +24,7 @@ GravityTDS gravityTds;
 
 float temperature = 25, tdsValue = 0;
 unsigned long previousMillis = 0;
-const long interval = 750; // Interval for updating TDS value and Blynk
+const long interval = 1000; // Interval for updating TDS value and Blynk
 
 // Blynk terminal widget on virtual pin V4
 WidgetTerminal terminal(V4);
@@ -92,7 +92,7 @@ void loop() {
       delay(250);
     }
 
-    if (tdsValue > 100) {
+    if (tdsValue > 500) {
       digitalWrite(redPin, HIGH);
       digitalWrite(greenPin, LOW);
       digitalWrite(bluePin, LOW);
