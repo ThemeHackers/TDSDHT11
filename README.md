@@ -32,46 +32,49 @@ The microcontroller is reset via the web server http://............/reset
 **Code Example (Arduino):**
 
 ```c++
-void setup() {
-  pinMode(redPin, OUTPUT);
-  pinMode(LED_BUILTIN, OUTPUT);
-  Serial.begin(115200);
-  gravityTds.setPin(TdsSensorPin);
-  gravityTds.setAref(5.0);
-  gravityTds.setAdcRange(1024);
-  Serial.begin(115200);
-  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+void blinkBuiltinLED(int onTime, int offTime) {
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(onTime);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(offTime);
 }
 
-void loop() {
-  Blynk.run();
-  gravityTds.setTemperature(temperature);
-  gravityTds.update();
-  tdsValue = gravityTds.getTdsValue();
+void checkWiFiConnection() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi connection lost. Reconnecting...");
+    WiFi.begin(ssid, pass);
 
-  Serial.print("TDS: ");
-  Serial.print(tdsValue, 0);
-  Serial.println(" ppm");
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+      delay(500);
+      Serial.print(".");
+      attempts++;
+    }
 
-  // Adjusting the conditions
-  if (tdsValue >= 500) {
-    digitalWrite(LED_BUILTIN, HIGH); // Red color
-    digitalWrite(redPin, HIGH);
-  } else if (tdsValue >= 301 && tdsValue <= 500) {
-    digitalWrite(LED_BUILTIN, HIGH); // Red color
-    digitalWrite(redPin, HIGH);
-  } else if (tdsValue >= 50 && tdsValue <= 300) {
-    digitalWrite(LED_BUILTIN, LOW); // Green color
-    digitalWrite(redPin, LOW);
-  } else {
-    digitalWrite(LED_BUILTIN, LOW); // Turn off LED
-    digitalWrite(redPin, LOW);
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("\nWiFi reconnected");
+    } else {
+      Serial.println("\nWiFi reconnection failed. Please check your credentials.");
+    }
   }
+}
 
-  Blynk.virtualWrite(V0, tdsValue);
+// Blynk function to handle terminal input
+BLYNK_WRITE(V4) {
+  String command = param.asStr();
 
-  checkWiFiConnection(); // Check WiFi connection periodically
-  delay(1000);           // Adjust the delay according to your requirements
+  if (command == "ipconfig") {
+    String ipAddress = WiFi.localIP().toString();
+    terminal.println("IP Address: http://" + ipAddress + "/reset");
+    terminal.flush();
+  } else if (command == "clear") {
+    terminal.clear();
+    terminal.println("Terminal cleared...");
+    terminal.flush();
+  } else {
+    terminal.println("Unknown command: " + command);
+    terminal.flush();
+  }
 }
 ```
 **Notes:**
